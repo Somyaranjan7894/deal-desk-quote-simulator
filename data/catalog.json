@@ -1,0 +1,45 @@
+{
+  "currency": "USD",
+  "discount_rules": [
+    {
+      "code": "STARTER",
+      "min_seats": 1,
+      "max_seats": 9,
+      "max_discount_pct": 10
+    },
+    {
+      "code": "GROWTH",
+      "min_seats": 10,
+      "max_seats": 49,
+      "max_discount_pct": 20
+    },
+    {
+      "code": "ENTERPRISE",
+      "min_seats": 50,
+      "max_seats": 99999,
+      "max_discount_pct": 30
+    }
+  ],
+  "products": [
+    {
+      "sku": "AGENT-CORE",
+      "name": "Agent Core",
+      "unit_price": 120
+    },
+    {
+      "sku": "AGENT-ANALYTICS",
+      "name": "Agent Analytics",
+      "unit_price": 80
+    },
+    {
+      "sku": "AGENT-AUTOMATE",
+      "name": "Agent Automate",
+      "unit_price": 150
+    },
+    {
+      "sku": "ONBOARDING",
+      "name": "Implementation",
+      "unit_price": 2500
+    }
+  ]
+}
