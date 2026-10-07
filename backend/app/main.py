@@ -25,10 +25,11 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# Enable CORS for frontend client communication
+# Enable CORS for frontend client communication (supports local dev and all Vercel deployments)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
+    allow_origin_regex=r"^https://.*\.vercel\.app$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -125,13 +126,37 @@ async def handle_catalog_error(_: Request, exc: CatalogError) -> JSONResponse:
 # ---------------------------------------------------------------------------
 
 @app.get("/health", response_model=HealthResponse, tags=["Health"])
+@app.get("/health/", response_model=HealthResponse, tags=["Health"], include_in_schema=False)
+@app.get("/api/health", response_model=HealthResponse, tags=["Health"])
+@app.get("/api/health/", response_model=HealthResponse, tags=["Health"], include_in_schema=False)
 async def health_check() -> HealthResponse:
     """
-    Development and orchestration health check endpoint.
-    Returns status: ok when the backend is responsive.
+    Public health check endpoint.
+    Returns HTTP 200 with status: ok when the backend is operational.
     """
     return HealthResponse(status="ok")
 
 
+@app.get("/", tags=["Health"])
+async def root() -> dict:
+    """Root status endpoint returning HTTP 200."""
+    return {"status": "ok", "service": "deal-desk-quote-simulator-api"}
+
+
 # Mount API routers under /api
 app.include_router(api_router, prefix="/api")
+
+
+if __name__ == "__main__":
+    import os
+    import uvicorn
+
+    server_port = int(
+        os.environ.get(
+            "PORT",
+            settings.PORT or os.environ.get("BACKEND_PORT", settings.BACKEND_PORT),
+        )
+    )
+    server_host = os.environ.get("BACKEND_HOST", settings.BACKEND_HOST)
+    print(f"Starting Deal Desk Quote Simulator API on {server_host}:{server_port}")
+    uvicorn.run("app.main:app", host=server_host, port=server_port, reload=False)

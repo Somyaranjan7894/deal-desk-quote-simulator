@@ -10,6 +10,19 @@ import type {
 } from "../types/index.ts";
 
 /**
+ * Normalizes the backend base URL by stripping trailing slashes and any
+ * trailing '/api' suffix, ensuring endpoint concatenation never results in
+ * duplicated paths like '/api/api/...'.
+ */
+export function cleanBaseUrl(url: string): string {
+  let cleaned = (url || "").trim().replace(/\/+$/, "");
+  if (cleaned.endsWith("/api")) {
+    cleaned = cleaned.slice(0, -4).replace(/\/+$/, "");
+  }
+  return cleaned || "http://localhost:8000";
+}
+
+/**
  * Base URL configuration for the FastAPI service.
  * Supports both NEXT_PUBLIC_API_URL and NEXT_PUBLIC_API_BASE_URL.
  */
@@ -18,7 +31,23 @@ const rawBaseUrl =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   "http://localhost:8000";
 
-export const BACKEND_BASE_URL = rawBaseUrl.replace(/\/+$/, "");
+export const BACKEND_BASE_URL = cleanBaseUrl(rawBaseUrl);
+
+/**
+ * Safely constructs the target request URL from a base URL and endpoint,
+ * preventing duplicate slashes, duplicate /api prefixes, or path malformations.
+ */
+export function buildApiUrl(baseUrl: string, endpoint: string): string {
+  const cleanBase = cleanBaseUrl(baseUrl);
+  let cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+
+  // Guard against duplicate /api prefix
+  if (cleanBase.endsWith("/api") && cleanEndpoint.startsWith("/api/")) {
+    cleanEndpoint = cleanEndpoint.slice(4);
+  }
+
+  return `${cleanBase}${cleanEndpoint}`;
+}
 
 /**
  * Structured API Error containing HTTP status and descriptive error message.
@@ -69,7 +98,7 @@ async function request<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = `${BACKEND_BASE_URL}${endpoint}`;
+  const url = buildApiUrl(BACKEND_BASE_URL, endpoint);
   let response: Response;
 
   try {

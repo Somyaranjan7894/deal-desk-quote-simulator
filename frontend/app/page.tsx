@@ -10,7 +10,7 @@ import {
   QuoteFormState,
   QuoteRequest,
 } from "@/types";
-import { calculateQuote, createQuote, getCatalog, ApiError } from "@/lib/api";
+import { calculateQuote, createQuote, getCatalog, ApiError, BACKEND_BASE_URL } from "@/lib/api";
 import {
   clearLocalDraft,
   loadLocalDraft,
@@ -362,7 +362,7 @@ export default function QuoteBuilderPage() {
         <div className="spinner spinner-primary" style={{ width: 28, height: 28, margin: "0 auto 1rem" }} />
         <h2>Loading Product Catalog...</h2>
         <p style={{ marginTop: "0.5rem" }}>
-          Connecting to Deal Desk backend service at {process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}
+          Connecting to Deal Desk backend service at {BACKEND_BASE_URL}
         </p>
       </div>
     );

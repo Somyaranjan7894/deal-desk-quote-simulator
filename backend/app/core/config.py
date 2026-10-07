@@ -6,9 +6,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Deal Desk Quote Simulator API"
     VERSION: str = "0.1.0"
-    BACKEND_HOST: str = "127.0.0.1"
+    BACKEND_HOST: str = "0.0.0.0"
     BACKEND_PORT: int = 8000
-    CORS_ORIGINS: Union[List[str], str] = ["http://localhost:3000"]
+    PORT: Union[int, None] = None
+    CORS_ORIGINS: Union[List[str], str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://deal-desk-quote-simulator.vercel.app",
+    ]
     CATALOG_PATH: str = "../data/catalog.json"
     GEMINI_API_KEY: Union[str, None] = None
     GEMINI_MODEL: str = "gemini-2.5-flash"

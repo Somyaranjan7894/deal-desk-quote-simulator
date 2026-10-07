@@ -276,6 +276,8 @@ The What-If Quote Simulator is powered entirely by `POST /api/quotes/calculate`:
 - **Zero Token Cost**: Modeling dozens of parameter permutations incurs zero API costs.
 - **Safety**: What-If scenarios are never persisted automatically, ensuring draft and saved quotes remain intact.
 
-
-
-
+### 8. Production Health Check & API URL Normalization
+- **Public Health Route**: The backend exposes `GET /health` (along with `/health/`, `/api/health`, and `/`) returning `{"status": "ok"}` to satisfy cloud health checkers (Render, Vercel, uptime monitors).
+- **Binding & Port**: Render dynamically allocates `$PORT` and expects services to bind to `0.0.0.0`. Uvicorn is configured via `run.py` and `render.yaml` to bind to `0.0.0.0:$PORT`.
+- **CORS Configuration**: Supports explicit origins (`localhost:3000`, `https://deal-desk-quote-simulator.vercel.app`) as well as dynamic Vercel preview environments via regex (`^https://.*\.vercel\.app$`).
+- **Defensive Frontend URL Construction**: Frontend API clients use `cleanBaseUrl` and `buildApiUrl` to strip erroneous trailing `/api` suffixes and avoid malformed paths like `/api/api/...` or double slashes `//`.

@@ -8,6 +8,9 @@ import {
   getQuote,
   getQuotes,
   updateQuoteStatus,
+  fetchHealth,
+  cleanBaseUrl,
+  buildApiUrl,
 } from "../lib/api.ts";
 import type { QuoteRequest } from "../types/index.ts";
 
@@ -295,3 +298,69 @@ test("API client rethrows AbortError on cancellation without wrapping in ApiErro
     globalThis.fetch = originalFetch;
   }
 });
+
+test("fetchHealth successfully calls /health and parses ok status", async () => {
+  const originalFetch = globalThis.fetch;
+  let capturedUrl = "";
+
+  globalThis.fetch = async (url) => {
+    capturedUrl = String(url);
+    return new Response(JSON.stringify({ status: "ok" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  };
+
+  try {
+    const res = await fetchHealth();
+    assert.ok(capturedUrl.endsWith("/health"));
+    assert.equal(res.status, "ok");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("cleanBaseUrl normalizes trailing slashes and trailing /api correctly", () => {
+  assert.equal(cleanBaseUrl("http://localhost:8000"), "http://localhost:8000");
+  assert.equal(cleanBaseUrl("http://localhost:8000/"), "http://localhost:8000");
+  assert.equal(cleanBaseUrl("https://deal-desk.onrender.com/api"), "https://deal-desk.onrender.com");
+  assert.equal(cleanBaseUrl("https://deal-desk.onrender.com/api/"), "https://deal-desk.onrender.com");
+  assert.equal(cleanBaseUrl(""), "http://localhost:8000");
+});
+
+test("buildApiUrl safely constructs clean paths without /api/api or // duplicates", () => {
+  // Standard base and endpoints
+  assert.equal(
+    buildApiUrl("https://deal-desk.onrender.com", "/health"),
+    "https://deal-desk.onrender.com/health"
+  );
+  assert.equal(
+    buildApiUrl("https://deal-desk.onrender.com", "/api/catalog"),
+    "https://deal-desk.onrender.com/api/catalog"
+  );
+
+  // Base URL with trailing slash
+  assert.equal(
+    buildApiUrl("https://deal-desk.onrender.com/", "/api/catalog"),
+    "https://deal-desk.onrender.com/api/catalog"
+  );
+
+  // Base URL erroneously ending with /api
+  assert.equal(
+    buildApiUrl("https://deal-desk.onrender.com/api", "/api/catalog"),
+    "https://deal-desk.onrender.com/api/catalog"
+  );
+
+  // Base URL erroneously ending with /api/
+  assert.equal(
+    buildApiUrl("https://deal-desk.onrender.com/api/", "/health"),
+    "https://deal-desk.onrender.com/health"
+  );
+
+  // Endpoint without leading slash
+  assert.equal(
+    buildApiUrl("https://deal-desk.onrender.com", "health"),
+    "https://deal-desk.onrender.com/health"
+  );
+});
+
