@@ -1,8 +1,9 @@
 from typing import List
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Response, status
 
 from app.api.deps import (
     get_copilot_service,
+    get_gemini_service,
     get_quote_calculation_service,
     get_quote_service,
 )
@@ -18,6 +19,7 @@ from app.schemas.quote import (
     QuoteStatusUpdateRequest,
 )
 from app.services.copilot import CopilotService
+from app.services.gemini import GeminiService
 from app.services.quote import QuoteService
 from app.services.quote_calculation import QuoteCalculationService
 
@@ -62,9 +64,13 @@ def create_quote(
     description="Returns all persisted customer quotes.",
 )
 def list_quotes(
+    response: Response,
     quote_service: QuoteService = Depends(get_quote_service),
 ) -> List[QuoteResponse]:
-    """Lists all persisted quotes."""
+    """Lists all persisted quotes with explicit cache disabling headers."""
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     return quote_service.list_quotes()
 
 
@@ -88,6 +94,22 @@ def ask_draft_copilot(
 
 
 @router.get(
+    "/copilot/status",
+    status_code=status.HTTP_200_OK,
+    summary="Safe diagnostic status of Gemini Deal Desk Copilot",
+    description="Returns operational status of Gemini Copilot integration without exposing credentials.",
+)
+def get_copilot_status(
+    gemini_service: GeminiService = Depends(get_gemini_service),
+) -> dict:
+    """Safe diagnostic endpoint for Copilot service configuration."""
+    return {
+        "configured": gemini_service.is_configured,
+        "model": gemini_service.model,
+    }
+
+
+@router.get(
     "/{id}",
     response_model=QuoteResponse,
     status_code=status.HTTP_200_OK,
@@ -96,9 +118,13 @@ def ask_draft_copilot(
 )
 def get_quote_by_id(
     id: str,
+    response: Response,
     quote_service: QuoteService = Depends(get_quote_service),
 ) -> QuoteResponse:
-    """Retrieves a persisted quote by ID."""
+    """Retrieves a persisted quote by ID with explicit cache disabling headers."""
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     return quote_service.get_quote(id)
 
 

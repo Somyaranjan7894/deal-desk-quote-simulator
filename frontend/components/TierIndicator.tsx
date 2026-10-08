@@ -5,13 +5,42 @@ interface TierIndicatorProps {
   tiers: DiscountTier[];
   currentTier?: string;
   seats: number | "";
+  discountPct?: number | string;
 }
 
-export function TierIndicator({ tiers, currentTier, seats }: TierIndicatorProps) {
+export function TierIndicator({
+  tiers,
+  currentTier,
+  seats,
+  discountPct,
+}: TierIndicatorProps) {
   if (!tiers || tiers.length === 0) return null;
 
   // Determine active tier either from backend calculation or seat matching
   const activeCode = (currentTier || "").toUpperCase();
+
+  const activeTier = tiers.find((tier) =>
+    activeCode
+      ? activeCode === tier.code.toUpperCase()
+      : typeof seats === "number" && seats >= tier.min_seats && seats <= tier.max_seats
+  );
+
+  const numericDiscount =
+    discountPct !== undefined && discountPct !== ""
+      ? typeof discountPct === "number"
+        ? discountPct
+        : parseFloat(String(discountPct))
+      : null;
+
+  const maxDiscount = activeTier
+    ? typeof activeTier.max_discount_pct === "number"
+      ? activeTier.max_discount_pct
+      : parseFloat(String(activeTier.max_discount_pct))
+    : null;
+
+  const hasDiscountEntered = numericDiscount !== null && !isNaN(numericDiscount);
+  const exceedsTierCap =
+    hasDiscountEntered && maxDiscount !== null && numericDiscount > maxDiscount;
 
   return (
     <div>
@@ -43,6 +72,36 @@ export function TierIndicator({ tiers, currentTier, seats }: TierIndicatorProps)
           );
         })}
       </div>
+
+      {activeTier && maxDiscount !== null && (
+        <div
+          className={`tier-limit-status ${
+            hasDiscountEntered
+              ? exceedsTierCap
+                ? "invalid"
+                : "valid"
+              : "valid"
+          }`}
+          data-testid="tier-limit-status"
+        >
+          <div>
+            <span>Current Tier: <strong>{activeTier.code}</strong></span>
+            <span style={{ margin: "0 0.5rem", opacity: 0.5 }}>|</span>
+            <span>Maximum Discount: <strong>{formatPercentage(maxDiscount)}</strong></span>
+          </div>
+
+          {hasDiscountEntered && (
+            <div style={{ fontWeight: 600 }}>
+              <span>
+                {numericDiscount}% / {maxDiscount}%
+              </span>
+              <span style={{ marginLeft: "0.5rem" }}>
+                {exceedsTierCap ? "✕ Exceeds tier limit" : "✓ Within tier limit"}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

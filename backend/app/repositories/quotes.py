@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List, Optional
 from pydantic import ValidationError
 
+from app.core.config import settings
 from app.core.exceptions import (
     QuoteNotFoundError,
     QuotePersistenceError,
@@ -24,6 +25,9 @@ class QuoteRepository:
     def _resolve_path(cls, custom_path: Optional[Path]) -> Path:
         if custom_path is not None:
             return Path(custom_path).resolve()
+
+        if settings.QUOTES_STORAGE_PATH:
+            return Path(settings.QUOTES_STORAGE_PATH).resolve()
 
         # Anchored relative to project root:
         # backend/app/repositories/quotes.py -> parents[3] is project root

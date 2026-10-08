@@ -281,3 +281,32 @@ The What-If Quote Simulator is powered entirely by `POST /api/quotes/calculate`:
 - **Binding & Port**: Render dynamically allocates `$PORT` and expects services to bind to `0.0.0.0`. Uvicorn is configured via `run.py` and `render.yaml` to bind to `0.0.0.0:$PORT`.
 - **CORS Configuration**: Supports explicit origins (`localhost:3000`, `https://deal-desk-quote-simulator.vercel.app`) as well as dynamic Vercel preview environments via regex (`^https://.*\.vercel\.app$`).
 - **Defensive Frontend URL Construction**: Frontend API clients use `cleanBaseUrl` and `buildApiUrl` to strip erroneous trailing `/api` suffixes and avoid malformed paths like `/api/api/...` or double slashes `//`.
+
+---
+
+## Phase 9.6: Production Bug Fixes, Persistence Hardening & Gemini Copilot Repair
+
+### 1. Three-State UI Model for Quote Evaluation (Issue 2 & Issue 4)
+- **Decision**: The frontend quote builder and quote detail views implement an explicit three-state model for quote evaluation:
+  1. **State A — Valid and No Approval Required**: Discount $\le$ tier maximum AND no Deal Desk approval rules triggered (`approval_required === false`). Renders `✓ No Approval Required`.
+  2. **State B — Valid but Approval Required**: Discount $\le$ tier maximum AND one or more Deal Desk approval rules triggered (`approval_required === true`). Renders `⚠ Approval Required` with specific reasons (e.g., "Discount exceeds 15%").
+  3. **State C — Invalid Quote**: Discount $>$ tier maximum (e.g. Growth 30% when tier maximum is 20%). Renders `✕ Invalid Quote` with actionable guidance ("Discount exceeds maximum allowed discount for tier GROWTH. Reduce discount to 20% or below.").
+- **Critical Invariant**: An invalid quote **never** displays "No Approval Required" or "Approval Required". The calculation state is cleared on validation rejection (`setCalculation(null)`), preventing stale calculation objects from displaying false approval decisions.
+- **Visual Separation in Tier Indicator**: `TierIndicator` explicitly displays both the tier maximum and current utilization (`30% / 30% - Within tier limit` vs `30% / 20% - Exceeds tier limit`). This completely separates tier limit enforcement from Deal Desk approval threshold triggers. Enterprise 30% is clearly within tier limits (`✓ Within tier limit`), while triggering governance review under the separate policy (`Discount exceeds 15%`).
+
+### 2. Ephemeral Storage Reality & Persistence Hardening (Issue 3)
+- **Decision**: Honestly document that Render's free-tier web services operate on an ephemeral container filesystem. Inactivity spin-downs (after 15 minutes) or service redeploys destroy runtime disk writes to `quotes.json`.
+- **Architectural Safeguards Implemented**:
+  1. **Configurable Persistence Path**: Added `QUOTES_STORAGE_PATH` setting to `app/core/config.py` and `QuoteRepository._resolve_path()`. In environments with persistent disks (e.g. Docker volumes, Render Persistent Disk mounts, or local directories), persistence is redirected without code modifications.
+  2. **HTTP Cache Invalidation**: Added strict anti-caching headers (`Cache-Control: no-cache, no-store, must-revalidate`, `Pragma: no-cache`, `Expires: 0`) to `GET /api/quotes` and `GET /api/quotes/{id}` to ensure browsers and edge CDNs never serve stale quote lists.
+  3. **Single Source of Truth**: The frontend saved quotes list (`/quotes`) fetches exclusively from the backend API. LocalStorage is strictly relegated to draft recovery on the quote creation form (`/`).
+  4. **Production Migration Path**: Documented that PostgreSQL (via SQLAlchemy or asyncpg) is the industry-standard persistence layer for production deployments requiring multi-instance scaling and durable retention across restarts.
+
+### 3. Gemini Copilot Resiliency & Model Fallback (Issue 1)
+- **Decision**: Updated default Gemini model to `gemini-3.5-flash-lite` and implemented automatic runtime fallback in `GeminiService`.
+- **Rationale**:
+  - `gemini-2.5-flash` experienced HTTP 429 rate limit / quota exhaustion and HTTP 503 high-demand errors on Google Generative AI v1beta endpoints.
+  - Probing confirmed that `gemini-3.5-flash-lite` has active quota, lower latency, and robust availability.
+  - If the primary configured model returns HTTP 404, 429, or 503, `GeminiService` automatically retries with `gemini-3.5-flash-lite` before falling back to the graceful error response.
+  - Added safe diagnostic endpoint `GET /api/quotes/copilot/status` exposing `configured: bool` and `model: str` without ever revealing the private `GEMINI_API_KEY`.
+  - HTTP client timeout increased from 10.0s to 15.0s to accommodate peak LLM generation latency without throwing client-side abort errors.

@@ -55,6 +55,11 @@ class GeminiService:
         self.model = model if model is not None else settings.GEMINI_MODEL
         self._http_client = http_client
 
+    @property
+    def is_configured(self) -> bool:
+        """Indicates whether a usable Gemini API key is configured."""
+        return bool(self.api_key and self.api_key.strip() not in ("", "your_gemini_api_key_here"))
+
     def generate_explanation(
         self,
         context: Dict[str, Any],
@@ -65,7 +70,7 @@ class GeminiService:
         Generates a natural-language explanation using Gemini with authoritative quote context.
         Returns a tuple: (answer_text, model_name, was_generated_by_llm).
         """
-        if not self.api_key or self.api_key.strip() in ("", "your_gemini_api_key_here"):
+        if not self.is_configured:
             return FALLBACK_NO_KEY_MESSAGE, self.model, False
 
         # Construct safe prompt containing authoritative context and untrusted user inquiry
@@ -97,9 +102,23 @@ class GeminiService:
         }
 
         try:
-            client = self._http_client or httpx.Client(timeout=12.0)
+            client = self._http_client or httpx.Client(timeout=15.0)
             try:
                 response = client.post(url, params=params, json=request_body)
+
+                # Automatic recovery: if the primary model returns 503 (overload), 429 (quota), or 404 (unavailable)
+                # and isn't already the stable default gemini-3.5-flash-lite, fallback gracefully
+                if response.status_code in (404, 429, 503) and self.model != "gemini-3.5-flash-lite":
+                    logger.warning(
+                        "Gemini model '%s' returned status %d. Attempting fallback to 'gemini-3.5-flash-lite'.",
+                        self.model,
+                        response.status_code,
+                    )
+                    fallback_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent"
+                    fallback_resp = client.post(fallback_url, params=params, json=request_body)
+                    if fallback_resp.status_code == 200:
+                        response = fallback_resp
+                        self.model = "gemini-3.5-flash-lite"
             finally:
                 if self._http_client is None:
                     client.close()

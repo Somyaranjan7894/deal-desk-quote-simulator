@@ -134,6 +134,7 @@ export default function QuoteBuilderPage() {
       (typeof form.discount_pct === "number" && form.discount_pct >= 0);
 
     if (!validSeats || !hasItems || !validItems || !validDiscount) {
+      setCalculation(null);
       setIsCalculating(false);
       return;
     }
@@ -167,6 +168,7 @@ export default function QuoteBuilderPage() {
           err instanceof ApiError
             ? err.detail
             : "Unable to calculate the quote. Please try again.";
+        setCalculation(null); // CRITICAL: Clear stale calculation result upon error
         setCalculationError(msg);
       } finally {
         setIsCalculating(false);
@@ -340,6 +342,15 @@ export default function QuoteBuilderPage() {
   const formValidation = validateQuoteForm(form, catalog);
   const canSave = formValidation.isValid && !calculationError;
 
+  const quoteStatus: "idle" | "loading" | "valid" | "invalid" | "error" =
+    calculationError || (catalog && formValidation.error?.includes("exceeds maximum allowable discount"))
+      ? "invalid"
+      : isCalculating
+      ? "loading"
+      : calculation
+      ? "valid"
+      : "idle";
+
   const lineItemsForSimulation = form.line_items.map((i) => ({
     sku: i.sku,
     quantity: typeof i.quantity === "number" ? i.quantity : parseInt(String(i.quantity), 10) || 1,
@@ -470,8 +481,9 @@ export default function QuoteBuilderPage() {
               {/* Tier Indicator Strip */}
               <TierIndicator
                 tiers={catalog.discount_rules}
-                currentTier={calculation?.tier}
+                currentTier={calculation?.tier || currentTierRule?.code}
                 seats={form.seats}
+                discountPct={form.discount_pct}
               />
             </div>
           </div>
@@ -591,6 +603,7 @@ export default function QuoteBuilderPage() {
             isCalculating={isCalculating}
             isSaving={isSaving}
             canSave={Boolean(canSave)}
+            quoteStatus={quoteStatus}
             tierMaxDiscountPct={currentTierRule?.max_discount_pct}
             validationError={calculationError}
             validationMessage={!formValidation.isValid ? formValidation.error : calculationError}
@@ -601,6 +614,8 @@ export default function QuoteBuilderPage() {
           {/* Deterministic Deal Health Metrics */}
           <DealHealth
             discountPct={form.discount_pct}
+            tierMaxDiscountPct={currentTierRule?.max_discount_pct}
+            isValid={quoteStatus === "valid"}
             approvalRequired={calculation?.approval_required}
             approvalReasons={calculation?.approval_reasons}
             annualCommitment={form.annual_commitment}

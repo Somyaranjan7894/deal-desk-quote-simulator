@@ -637,6 +637,36 @@ a:hover {
   color: var(--success-text);
 }
 
+.approval-banner.invalid {
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  color: var(--danger-text);
+}
+
+.tier-limit-status {
+  margin-top: 0.65rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tier-limit-status.valid {
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
+  color: var(--success-text);
+}
+
+.tier-limit-status.invalid {
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  color: var(--danger-text);
+}
+
 .approval-banner-icon {
   font-size: 1.25rem;
   line-height: 1;

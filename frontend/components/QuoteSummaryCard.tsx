@@ -8,6 +8,7 @@ interface QuoteSummaryCardProps {
   isCalculating: boolean;
   isSaving: boolean;
   canSave: boolean;
+  quoteStatus?: "idle" | "loading" | "valid" | "invalid" | "error";
   tierMaxDiscountPct?: number | string | null;
   validationError?: string | null;
   validationMessage?: string | null;
@@ -20,12 +21,15 @@ export function QuoteSummaryCard({
   isCalculating,
   isSaving,
   canSave,
+  quoteStatus,
   tierMaxDiscountPct,
   validationError,
   validationMessage,
   onSaveDraft,
   onReset,
 }: QuoteSummaryCardProps) {
+  const isInvalid = Boolean(validationError) || quoteStatus === "invalid";
+
   return (
     <div className="card quote-summary-card" aria-label="Quote Summary">
       <div className="card-title">
@@ -37,7 +41,10 @@ export function QuoteSummaryCard({
               <span>Updating quote...</span>
             </>
           )}
-          {!isCalculating && calculation && (
+          {!isCalculating && isInvalid && (
+            <span style={{ color: "var(--danger)", fontWeight: 600 }}>✕ Requires correction</span>
+          )}
+          {!isCalculating && !isInvalid && calculation && (
             <span style={{ color: "var(--success)" }}>✓ Up to date</span>
           )}
         </div>
@@ -45,31 +52,33 @@ export function QuoteSummaryCard({
 
       {/* Approval Banner */}
       <ApprovalBanner
+        status={isInvalid ? "invalid" : quoteStatus || (isCalculating ? "loading" : calculation ? "valid" : "idle")}
         approvalRequired={calculation?.approval_required}
         approvalReasons={calculation?.approval_reasons}
+        errorMessage={validationError}
       />
 
       {/* Financial Breakdown */}
       <div className="summary-breakdown">
         <div className="summary-row">
           <span>Subtotal</span>
-          <span>{formatCurrency(calculation?.subtotal ?? "0")}</span>
+          <span>{calculation ? formatCurrency(calculation.subtotal ?? "0") : "—"}</span>
         </div>
 
         <div className="summary-row discount">
           <span>
             Discount (
-            {formatPercentage(calculation?.discount_pct ?? 0)})
+            {calculation ? formatPercentage(calculation.discount_pct ?? 0) : "—"})
           </span>
           <span>
-            –{formatCurrency(calculation?.discount_amount ?? "0")}
+            {calculation ? `–${formatCurrency(calculation.discount_amount ?? "0")}` : "—"}
           </span>
         </div>
 
         <div className="summary-row total">
           <span>Final Total</span>
           <span className="summary-total-value">
-            {formatCurrency(calculation?.total ?? "0")}
+            {calculation ? formatCurrency(calculation.total ?? "0") : "—"}
           </span>
         </div>
       </div>

@@ -15,8 +15,9 @@ class Settings(BaseSettings):
         "https://deal-desk-quote-simulator.vercel.app",
     ]
     CATALOG_PATH: str = "../data/catalog.json"
+    QUOTES_STORAGE_PATH: Union[str, None] = None
     GEMINI_API_KEY: Union[str, None] = None
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-3.5-flash-lite"
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod

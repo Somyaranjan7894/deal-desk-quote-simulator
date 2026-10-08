@@ -175,6 +175,7 @@ export default function QuoteReviewPage() {
 
       {/* Prominent Deal Desk Approval Banner */}
       <ApprovalBanner
+        status="valid"
         approvalRequired={quote.approval_required}
         approvalReasons={quote.approval_reasons}
       />

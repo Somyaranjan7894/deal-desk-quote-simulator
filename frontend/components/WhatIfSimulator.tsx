@@ -98,6 +98,7 @@ export function WhatIfSimulator({
             ? err.detail
             : "Unable to calculate scenario. Verify your scenario parameters.";
         setError(msg);
+        setResult(null);
       } finally {
         setIsCalculating(false);
       }

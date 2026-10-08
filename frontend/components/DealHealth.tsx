@@ -3,6 +3,8 @@ import { formatPercentage } from "@/lib/formatters";
 
 interface DealHealthProps {
   discountPct: number | string;
+  tierMaxDiscountPct?: number | string | null;
+  isValid?: boolean;
   approvalRequired?: boolean;
   approvalReasons?: string[];
   annualCommitment?: boolean;
@@ -23,12 +25,20 @@ interface HealthIndicator {
  */
 export function DealHealth({
   discountPct,
+  tierMaxDiscountPct,
+  isValid = true,
   approvalRequired = false,
   approvalReasons = [],
   annualCommitment = false,
   hasProducts = true,
 }: DealHealthProps) {
   const numericDiscount = typeof discountPct === "number" ? discountPct : parseFloat(String(discountPct)) || 0;
+  const numericTierMax =
+    tierMaxDiscountPct !== undefined && tierMaxDiscountPct !== null
+      ? typeof tierMaxDiscountPct === "number"
+        ? tierMaxDiscountPct
+        : parseFloat(String(tierMaxDiscountPct))
+      : null;
 
   const indicators: HealthIndicator[] = useMemo(() => {
     // 1. Pricing Metric
@@ -48,7 +58,17 @@ export function DealHealth({
 
     // 2. Discount Metric
     let discountMetric: HealthIndicator;
-    if (numericDiscount <= 0) {
+    if (!isValid || (numericTierMax !== null && numericDiscount > numericTierMax)) {
+      discountMetric = {
+        label: "Discount",
+        statusText: "Invalid",
+        statusType: "warning",
+        detail:
+          numericTierMax !== null && numericDiscount > numericTierMax
+            ? `${formatPercentage(numericDiscount)} exceeds tier maximum allowable discount of ${formatPercentage(numericTierMax)}`
+            : "Quote parameters require correction",
+      };
+    } else if (numericDiscount <= 0) {
       discountMetric = {
         label: "Discount",
         statusText: "Good (0%)",
@@ -67,27 +87,37 @@ export function DealHealth({
         label: "Discount",
         statusText: `Review (${formatPercentage(numericDiscount)})`,
         statusType: "warning",
-        detail: `${formatPercentage(numericDiscount)} exceeds 15% approval threshold`,
+        detail: `${formatPercentage(numericDiscount)} within tier limit, requires Deal Desk approval (>15% rule)`,
       };
     }
 
     // 3. Approval Metric
-    const approvalMetric: HealthIndicator = approvalRequired
-      ? {
-          label: "Approval",
-          statusText: "Required",
-          statusType: "warning",
-          detail:
-            approvalReasons.length > 0
-              ? `${approvalReasons.length} governance rule(s) triggered`
-              : "Deal Desk review required",
-        }
-      : {
-          label: "Approval",
-          statusText: "Standard Path",
-          statusType: "good",
-          detail: "No approval triggers active",
-        };
+    let approvalMetric: HealthIndicator;
+    if (!isValid) {
+      approvalMetric = {
+        label: "Approval",
+        statusText: "Pending Valid Quote",
+        statusType: "neutral",
+        detail: "Cannot determine approval status until the quote is valid",
+      };
+    } else if (approvalRequired) {
+      approvalMetric = {
+        label: "Approval",
+        statusText: "Required",
+        statusType: "warning",
+        detail:
+          approvalReasons.length > 0
+            ? `${approvalReasons.length} governance rule(s) triggered`
+            : "Deal Desk review required",
+      };
+    } else {
+      approvalMetric = {
+        label: "Approval",
+        statusText: "Standard Path",
+        statusType: "good",
+        detail: "No approval triggers active",
+      };
+    }
 
     // 4. Annual Commitment Metric
     const commitmentMetric: HealthIndicator = annualCommitment
@@ -105,7 +135,7 @@ export function DealHealth({
         };
 
     return [pricingMetric, discountMetric, approvalMetric, commitmentMetric];
-  }, [hasProducts, numericDiscount, approvalRequired, approvalReasons, annualCommitment]);
+  }, [hasProducts, isValid, numericDiscount, numericTierMax, approvalRequired, approvalReasons, annualCommitment]);
 
   return (
     <div className="card deal-health-card" aria-label="Deal Health Overview">

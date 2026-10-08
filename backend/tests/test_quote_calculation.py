@@ -482,3 +482,110 @@ def test_calculation_engine_uses_catalog_values_not_hardcoded(calculation_servic
         assert res.line_items[0].unit_price == expected_unit_price
         assert res.line_items[0].line_total == expected_unit_price * 2
         assert res.subtotal == expected_unit_price * 2
+
+
+# ---------------------------------------------------------------------------
+# Phase 9.6 Regression Tests — Tier Limits vs. Approval Triggers
+# ---------------------------------------------------------------------------
+
+def test_phase9_6_enterprise_50_seats_30_percent_valid_and_approval_required(calculation_service):
+    """Case A: Enterprise 50 seats + 30% discount is within tier ceiling (30%) but requires approval (>15%)."""
+    req = QuoteRequest(
+        customer_name="Enterprise Corp",
+        seats=50,
+        line_items=[QuoteLineItem(sku="AGENT-CORE", quantity=1)],
+        discount_pct=Decimal("30.0"),
+    )
+    res = calculation_service.calculate(req)
+    assert res.tier == "ENTERPRISE"
+    assert res.discount_pct == Decimal("30.0")
+    assert res.approval_required is True
+    assert "Discount exceeds 15%" in res.approval_reasons
+
+
+def test_phase9_6_enterprise_50_seats_30_01_percent_fails_tier_validation(calculation_service):
+    """Case B: Enterprise 50 seats + 30.01% discount exceeds maximum allowed discount (30%)."""
+    req = QuoteRequest(
+        customer_name="Enterprise Overcap",
+        seats=50,
+        line_items=[QuoteLineItem(sku="AGENT-CORE", quantity=1)],
+        discount_pct=Decimal("30.01"),
+    )
+    with pytest.raises(DiscountExceedsTierMaximumError) as exc_info:
+        calculation_service.calculate(req)
+    assert exc_info.value.requested_discount == Decimal("30.01")
+    assert exc_info.value.tier_code == "ENTERPRISE"
+    assert exc_info.value.max_discount == Decimal("30")
+
+
+def test_phase9_6_growth_10_seats_20_percent_valid_and_approval_required(calculation_service):
+    """Case C: Growth 10 seats + 20% discount is within tier ceiling (20%) and requires approval (>15%)."""
+    req = QuoteRequest(
+        customer_name="Growth Midpoint",
+        seats=10,
+        line_items=[QuoteLineItem(sku="AGENT-CORE", quantity=1)],
+        discount_pct=Decimal("20.0"),
+    )
+    res = calculation_service.calculate(req)
+    assert res.tier == "GROWTH"
+    assert res.discount_pct == Decimal("20.0")
+    assert res.approval_required is True
+    assert "Discount exceeds 15%" in res.approval_reasons
+
+
+def test_phase9_6_growth_10_seats_20_01_percent_fails_tier_validation(calculation_service):
+    """Case D-1: Growth 10 seats + 20.01% discount exceeds maximum allowed discount (20%)."""
+    req = QuoteRequest(
+        customer_name="Growth Overcap Boundary",
+        seats=10,
+        line_items=[QuoteLineItem(sku="AGENT-CORE", quantity=1)],
+        discount_pct=Decimal("20.01"),
+    )
+    with pytest.raises(DiscountExceedsTierMaximumError) as exc_info:
+        calculation_service.calculate(req)
+    assert exc_info.value.requested_discount == Decimal("20.01")
+    assert exc_info.value.tier_code == "GROWTH"
+
+
+def test_phase9_6_growth_25_seats_30_percent_fails_tier_validation(calculation_service):
+    """Case D-2: Growth 25 seats + 30% discount exceeds maximum allowed discount (20%)."""
+    req = QuoteRequest(
+        customer_name="Growth Overcap Gross",
+        seats=25,
+        line_items=[QuoteLineItem(sku="AGENT-CORE", quantity=1)],
+        discount_pct=Decimal("30.0"),
+    )
+    with pytest.raises(DiscountExceedsTierMaximumError) as exc_info:
+        calculation_service.calculate(req)
+    assert exc_info.value.requested_discount == Decimal("30.0")
+    assert exc_info.value.tier_code == "GROWTH"
+    assert exc_info.value.max_discount == Decimal("20")
+
+
+def test_phase9_6_starter_9_seats_10_percent_valid_no_approval(calculation_service):
+    """Case E: Starter 9 seats + 10% discount is valid and requires NO approval."""
+    req = QuoteRequest(
+        customer_name="Starter Boundary",
+        seats=9,
+        line_items=[QuoteLineItem(sku="AGENT-CORE", quantity=1)],
+        discount_pct=Decimal("10.0"),
+    )
+    res = calculation_service.calculate(req)
+    assert res.tier == "STARTER"
+    assert res.discount_pct == Decimal("10.0")
+    assert res.approval_required is False
+    assert len(res.approval_reasons) == 0
+
+
+def test_phase9_6_starter_9_seats_10_01_percent_fails_tier_validation(calculation_service):
+    """Case F: Starter 9 seats + 10.01% discount exceeds maximum allowed discount (10%)."""
+    req = QuoteRequest(
+        customer_name="Starter Overcap",
+        seats=9,
+        line_items=[QuoteLineItem(sku="AGENT-CORE", quantity=1)],
+        discount_pct=Decimal("10.01"),
+    )
+    with pytest.raises(DiscountExceedsTierMaximumError) as exc_info:
+        calculation_service.calculate(req)
+    assert exc_info.value.requested_discount == Decimal("10.01")
+    assert exc_info.value.tier_code == "STARTER"

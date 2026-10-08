@@ -14,6 +14,6 @@ services:
       - key: CORS_ORIGINS
         value: "http://localhost:3000,https://deal-desk-quote-simulator.vercel.app"
       - key: GEMINI_MODEL
-        value: gemini-2.5-flash
+        value: gemini-3.5-flash-lite
       - key: GEMINI_API_KEY
         sync: false

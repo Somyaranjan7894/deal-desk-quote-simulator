@@ -26,7 +26,7 @@ All financial logic, tier calculations, and approval policies are **authoritativ
 
 - **Frontend**: Next.js 14 (App Router), React 18, TypeScript, Vanilla CSS Design System (Zero UI library bloat)
 - **Backend**: Python 3.11, FastAPI, Pydantic v2, Uvicorn
-- **AI Intelligence**: Google Gemini (`gemini-2.5-flash`), strictly backend-isolated via `httpx`
+- **AI Intelligence**: Google Gemini (`gemini-3.5-flash-lite` with automated fallback), strictly backend-isolated via `httpx`
 - **Data Source**: Immutable catalog source (`data/catalog.json`)
 - **Target Deployment**: Vercel (Frontend Free Tier) + Render (Backend Web Service Free Tier)
 
@@ -45,7 +45,7 @@ Render Free Tier (FastAPI Backend) ◄─── GEMINI_API_KEY (Backend Secret O
        ├── JSON Persistence Layer (backend/data/quotes.json)
        │
        ▼ HTTPS
-Google Gemini API (gemini-2.5-flash)
+Google Gemini API (gemini-3.5-flash-lite)
 ```
 
 ---
@@ -751,7 +751,7 @@ Browser / Next.js
 #### Configuration (Render Backend)
 ```env
 GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.5-flash-lite
 ```
 
 ### What-If Quote Simulator
@@ -764,6 +764,45 @@ The What-If Quote Simulator allows sales reps to model pricing scenarios (seats,
 
 ### Deterministic Deal Health
 A compact overview panel evaluating pricing completeness, discount threshold risk, Deal Desk approval status, and annual commitment terms. It uses transparent, explainable business rules rather than speculative AI risk scores.
+
+---
+
+## Phase 9.6 — Production Bug Fixes, Persistence Hardening & Gemini Copilot Repair
+
+Phase 9.6 resolves critical production issues identified after initial cloud deployment, hardens persistence architecture, and restores Gemini Copilot functionality.
+
+### 1. Issue 1 — Gemini Copilot Repair & Fallback
+- **Root Cause**: `gemini-2.5-flash` returned HTTP 429 quota exhaustion and 503 high-demand errors on Google Generative AI v1beta endpoints. The backend lacked automated model fallback and client timeout was too short (10.0s).
+- **Fix**:
+  - Upgraded default model to `gemini-3.5-flash-lite`.
+  - Added automated retry/fallback to `gemini-3.5-flash-lite` in `GeminiService` if the primary model returns 404, 429, or 503.
+  - Increased HTTP client timeout to 15.0s.
+  - Added safe diagnostic endpoint `GET /api/quotes/copilot/status` (exposes only `{"configured": true, "model": "gemini-3.5-flash-lite"}` without leaking secrets).
+
+### 2. Issue 2 — Enterprise Discount Warning Repair
+- **Root Cause**: The UI lacked clear distinction between **Tier Maximums** (Enterprise allows up to 30%) and **Approval Thresholds** (discounts > 15% require Deal Desk review). Users entering 30% were confused when the approval banner stated "Discount exceeds 15%", interpreting it as a tier violation.
+- **Fix**:
+  - Enhanced `TierIndicator` with an explicit tier limit comparison strip: `Current Tier: ENTERPRISE | Maximum Discount: 30% | 30% / 30% (✓ Within tier limit)`.
+  - Enterprise 30% is clearly marked as valid within the tier cap, while correctly requiring approval under the separate >15% governance policy.
+
+### 3. Issue 3 — Persistence Hardening & Ephemeral Reality
+- **Root Cause**: Render free-tier web services spin down after 15 minutes of inactivity and redeploy onto fresh container filesystems. Runtime disk writes to `quotes.json` do not survive container rebuilds or multi-hour sleep cycles. Furthermore, `QuoteRepository` had no environment variable path override, and quote GET requests lacked anti-caching headers.
+- **Fix**:
+  - Added `QUOTES_STORAGE_PATH` configuration in `backend/app/core/config.py` and `QuoteRepository._resolve_path()` to support mounted persistent storage.
+  - Added HTTP anti-caching headers (`Cache-Control: no-cache, no-store, must-revalidate`, `Pragma: no-cache`, `Expires: 0`) to `GET /api/quotes` and `GET /api/quotes/{id}`.
+  - Confirmed the frontend saved quotes list (`/quotes`) fetches directly from the backend API as the single source of truth (localStorage is strictly for draft form recovery).
+  - Added `backend/tests/test_persistence_lifecycle.py` testing quote survival across separate repository and service object lifetimes.
+  - Clearly documented that PostgreSQL is the production migration path for durable multi-instance cloud deployments.
+
+### 4. Issue 4 — Growth 30% Invalid Quote Handling
+- **Root Cause**: When an invalid discount was entered (e.g., Growth tier with 30% discount, exceeding the 20% tier cap), the backend calculation endpoint rejected the request with HTTP 400 (`DiscountExceedsTierMaximumError`). In the frontend, the `catch` block set `calculationError` but failed to clear `calculation` (`setCalculation(null)`). The UI retained the previous calculation where `approval_required === false`, erroneously displaying "No Approval Required".
+- **Fix**:
+  - Implemented an explicit three-state model:
+    - **Valid + No Approval**: `✓ No Approval Required`
+    - **Valid + Approval Required**: `⚠ Approval Required` (with reasons)
+    - **Invalid Quote**: `✕ Invalid Quote` (with error message: *"Discount exceeds maximum allowed discount for tier GROWTH. Reduce discount to 20% or below."*)
+  - Explicitly cleared calculation state (`setCalculation(null)`) on validation rejection.
+  - Updated `ApprovalBanner` to render `✕ Invalid Quote` with guidance when `status="invalid"`. Invalid quotes **never** display "No Approval Required" or "Approval Required".
 
 
 
