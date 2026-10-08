@@ -4,7 +4,7 @@
 
 - **Frontend**: [https://deal-desk-quote-simulator-nu.vercel.app/](https://deal-desk-quote-simulator-nu.vercel.app/)
 - **Backend API**: [https://deal-desk-quote-simulator-j1sp.onrender.com](https://deal-desk-quote-simulator-j1sp.onrender.com) (Health Check: [`/health`](https://deal-desk-quote-simulator-j1sp.onrender.com/health) | Swagger Docs: [`/docs`](https://deal-desk-quote-simulator-j1sp.onrender.com/docs))
-- **GitHub Repository**: [https://github.com/Somyaran7894/deal-desk-quote-simulator.git](https://github.com/Somyaran7894/deal-desk-quote-simulator.git)
+- **GitHub Repository**: [https://github.com/Somyaranjan7894/deal-desk-quote-simulator](https://github.com/Somyaranjan7894/deal-desk-quote-simulator)
 
 > **Hosting Notice (Cold Start)**: The backend runs on Render's free tier. If inactive for more than 15 minutes, the service spins down to save resources. The initial wake-up request may take ~50–60 seconds, after which responses are fast and normal.
 
@@ -78,7 +78,7 @@ Get both services running and tested in under 10 minutes:
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/Somyaran7894/deal-desk-quote-simulator.git
+git clone https://github.com/Somyaranjan7894/deal-desk-quote-simulator.git
 cd deal-desk-quote-simulator
 
 # 2. Configure Environment from template
@@ -185,7 +185,7 @@ Detailed instructions are available in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
   - Health Probe: [https://deal-desk-quote-simulator-j1sp.onrender.com/health](https://deal-desk-quote-simulator-j1sp.onrender.com/health)
   - Interactive API Docs: [https://deal-desk-quote-simulator-j1sp.onrender.com/docs](https://deal-desk-quote-simulator-j1sp.onrender.com/docs)
   - Copilot Status: [https://deal-desk-quote-simulator-j1sp.onrender.com/api/quotes/copilot/status](https://deal-desk-quote-simulator-j1sp.onrender.com/api/quotes/copilot/status)
-- **GitHub Repository**: [https://github.com/Somyaran7894/deal-desk-quote-simulator.git](https://github.com/Somyaran7894/deal-desk-quote-simulator.git)
+- **GitHub Repository**: [https://github.com/Somyaranjan7894/deal-desk-quote-simulator](https://github.com/Somyaranjan7894/deal-desk-quote-simulator)
 
 ### Render (FastAPI Backend Free Tier)
 - **Runtime**: Python 3
