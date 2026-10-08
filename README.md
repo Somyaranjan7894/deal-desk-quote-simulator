@@ -1,10 +1,30 @@
 # Deal Desk Quote Simulator
 
+## Live Demo & Repository
+
+- **Frontend**: [https://deal-desk-quote-simulator-nu.vercel.app/](https://deal-desk-quote-simulator-nu.vercel.app/)
+- **Backend API**: [https://deal-desk-quote-simulator-j1sp.onrender.com](https://deal-desk-quote-simulator-j1sp.onrender.com) (Health Check: [`/health`](https://deal-desk-quote-simulator-j1sp.onrender.com/health) | Swagger Docs: [`/docs`](https://deal-desk-quote-simulator-j1sp.onrender.com/docs))
+- **GitHub Repository**: [https://github.com/Somyaran7894/deal-desk-quote-simulator.git](https://github.com/Somyaran7894/deal-desk-quote-simulator.git)
+
+> **Hosting Notice (Cold Start)**: The backend runs on Render's free tier. If inactive for more than 15 minutes, the service spins down to save resources. The initial wake-up request may take ~50–60 seconds, after which responses are fast and normal.
+
+---
+
 ## Overview
 
 The **Deal Desk Quote Simulator** is an enterprise sales quoting and governance platform designed for sales representatives and Deal Desk analysts. It enables sales teams to configure customer proposals, evaluate seat-bracketed pricing tiers, test pricing scenarios in real time, and request approvals based on deterministic financial rules and AI-assisted governance intelligence.
 
 All financial logic, tier calculations, and approval policies are **authoritative on the backend**, ensuring absolute pricing integrity.
+
+---
+
+## Tech Stack
+
+- **Frontend**: Next.js 14 (App Router), React 18, TypeScript, Vanilla CSS Design System (Zero UI library overhead)
+- **Backend**: Python 3.11, FastAPI, Pydantic v2, Uvicorn, pytest
+- **AI Intelligence**: Google Gemini (`gemini-3.5-flash-lite` with automatic fallback), backend-isolated via `httpx`
+- **Data Source**: Immutable catalog source (`data/catalog.json`) and local JSON persistence (`backend/data/quotes.json`)
+- **Cloud Deployment**: Vercel (Edge Frontend) + Render (FastAPI Web Service)
 
 ---
 
@@ -52,12 +72,44 @@ Google Gemini API (gemini-3.5-flash-lite)
 
 ## Local Development
 
+### 10-Minute Reviewer Quickstart
+
+Get both services running and tested in under 10 minutes:
+
+```bash
+# 1. Clone repository
+git clone https://github.com/Somyaran7894/deal-desk-quote-simulator.git
+cd deal-desk-quote-simulator
+
+# 2. Configure Environment from template
+cp .env.example .env
+
+# 3. Setup and start Backend (Terminal 1)
+python -m venv backend/.venv
+# Windows (PowerShell):
+.\backend\.venv\Scripts\Activate.ps1
+# macOS / Linux:
+source backend/.venv/bin/activate
+
+pip install -r backend/requirements.txt
+uvicorn app.main:app --app-dir backend --reload --host 127.0.0.1 --port 8000
+
+# 4. Setup and start Frontend (Terminal 2)
+cd frontend
+npm install
+npm run dev
+
+# 5. Open Application
+# Browser: http://localhost:3000
+# API Docs: http://127.0.0.1:8000/docs
+```
+
 ### 1. Prerequisites
 - **Node.js**: v18.18+ or v20+ / v22+
 - **Python**: v3.10+
 - **npm**: v9+
 
-### 2. Backend Setup
+### 2. Backend Setup & Run
 From the project root:
 ```bash
 # Create and activate Python virtual environment
@@ -74,9 +126,9 @@ pip install -r backend/requirements.txt
 # Start FastAPI development server
 uvicorn app.main:app --app-dir backend --reload --host 127.0.0.1 --port 8000
 ```
-Backend API starts at `http://127.0.0.1:8000` (Docs: `http://127.0.0.1:8000/docs`).
+Backend API starts at `http://127.0.0.1:8000` (Docs: `http://127.0.0.1:8000/docs`, Health: `http://127.0.0.1:8000/health`).
 
-### 3. Frontend Setup
+### 3. Frontend Setup & Run
 In a new terminal window from the project root:
 ```bash
 cd frontend
@@ -91,34 +143,49 @@ Frontend application opens at `http://localhost:3000`.
 
 Copy the provided `.env.example` to `.env` (or configure in cloud platform dashboards):
 
-### Backend (`backend/.env` or Render Dashboard)
+```bash
+cp .env.example .env
+```
+
+### Backend Configuration (`.env` or Render Dashboard)
 ```env
 # Server Configuration
 BACKEND_HOST=127.0.0.1
 BACKEND_PORT=8000
-CORS_ORIGINS=http://localhost:3000
+CORS_ORIGINS=http://localhost:3000,https://deal-desk-quote-simulator-nu.vercel.app
 
 # Catalog Source Path
 CATALOG_PATH=../data/catalog.json
 
+# Optional: Persistent Storage Path Override
+# QUOTES_STORAGE_PATH=/var/data/quotes.json
+
 # Gemini AI Copilot (Backend ONLY - NEVER expose to frontend)
 GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.5-flash-lite
 ```
 
-### Frontend (`frontend/.env.local` or Vercel Dashboard)
+### Frontend Configuration (`frontend/.env.local` or Vercel Dashboard)
 ```env
 # Backend API Base URL (no trailing slash)
 NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
-> **Security Rule**: `GEMINI_API_KEY` must **never** be prefixed with `NEXT_PUBLIC_` or placed in frontend configuration files.
+> **Security Rule**: `GEMINI_API_KEY` must **never** be prefixed with `NEXT_PUBLIC_` or placed in frontend configuration files. The browser client never contacts the Gemini API directly.
 
 ---
 
 ## Deployment
 
 Detailed instructions are available in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+### Live Deployment Links
+- **Frontend (Vercel)**: [https://deal-desk-quote-simulator-nu.vercel.app/](https://deal-desk-quote-simulator-nu.vercel.app/)
+- **Backend API (Render)**: [https://deal-desk-quote-simulator-j1sp.onrender.com](https://deal-desk-quote-simulator-j1sp.onrender.com)
+  - Health Probe: [https://deal-desk-quote-simulator-j1sp.onrender.com/health](https://deal-desk-quote-simulator-j1sp.onrender.com/health)
+  - Interactive API Docs: [https://deal-desk-quote-simulator-j1sp.onrender.com/docs](https://deal-desk-quote-simulator-j1sp.onrender.com/docs)
+  - Copilot Status: [https://deal-desk-quote-simulator-j1sp.onrender.com/api/quotes/copilot/status](https://deal-desk-quote-simulator-j1sp.onrender.com/api/quotes/copilot/status)
+- **GitHub Repository**: [https://github.com/Somyaran7894/deal-desk-quote-simulator.git](https://github.com/Somyaran7894/deal-desk-quote-simulator.git)
 
 ### Render (FastAPI Backend Free Tier)
 - **Runtime**: Python 3
@@ -128,8 +195,8 @@ Detailed instructions are available in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 - **Environment Variables**:
   - `PYTHON_VERSION`: `3.11.9`
   - `GEMINI_API_KEY`: `<your_gemini_api_key>`
-  - `GEMINI_MODEL`: `gemini-2.5-flash`
-  - `CORS_ORIGINS`: `http://localhost:3000,https://<your-vercel-domain>.vercel.app`
+  - `GEMINI_MODEL`: `gemini-3.5-flash-lite`
+  - `CORS_ORIGINS`: `http://localhost:3000,https://deal-desk-quote-simulator-nu.vercel.app`
 
 ### Vercel (Next.js Frontend Free Tier)
 - **Framework Preset**: Next.js
@@ -137,7 +204,24 @@ Detailed instructions are available in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 - **Build Command**: `next build`
 - **Output Directory**: `.next`
 - **Environment Variables**:
-  - `NEXT_PUBLIC_API_URL`: `https://<your-render-service>.onrender.com`
+  - `NEXT_PUBLIC_API_URL`: `https://deal-desk-quote-simulator-j1sp.onrender.com`
+
+---
+
+## Deployment Limitations & Production Architecture
+
+1. **Render Free-Tier Spin-Down (Cold Start)**:
+   - Free Render web services spin down after 15 minutes of inbound inactivity.
+   - The first request after a period of dormancy takes ~50–60 seconds for the container to wake up. Once awake, all requests respond with normal sub-second latencies.
+2. **Container Filesystem Ephemerality**:
+   - The application uses JSON persistence (`quotes.json`) by default.
+   - On Render's free tier, the container filesystem is ephemeral; service redeployments or container restarts re-initialize from the git repository image.
+   - For environments requiring persistent disks, `QUOTES_STORAGE_PATH` allows redirecting storage to mounted persistent volumes.
+   - **Production Migration Path**: For multi-instance, enterprise-grade cloud durability across restarts, PostgreSQL (via SQLAlchemy / asyncpg) is the recommended persistent data store.
+3. **AI Copilot External Quota & Latency**:
+   - Deal Desk Copilot uses Google Gemini (`gemini-3.5-flash-lite`) with automated retries.
+   - AI response times depend on Google Cloud API network latency (typically 1.5–3 seconds).
+   - **Critical Architecture Guarantee**: The core quote calculation engine, tier determination, discount enforcement, and approval workflow do NOT depend on Gemini and remain 100% available even if the external LLM is offline or rate-limited.
 
 ---
 
@@ -151,10 +235,11 @@ All API endpoints are mounted under `/api` (plus the `/health` root check):
 | `GET` | `/api/catalog` | Authoritative pricing tiers, seat rules, and products |
 | `POST` | `/api/quotes/calculate` | Stateless authoritative calculation of pricing & approvals |
 | `POST` | `/api/quotes` | Creates and persists a quote in `DRAFT` status |
-| `GET` | `/api/quotes` | Lists all saved quotes |
+| `GET` | `/api/quotes` | Lists all saved quotes (with `no-cache` headers) |
 | `GET` | `/api/quotes/{id}` | Retrieves a saved quote by unique ID |
 | `PATCH`| `/api/quotes/{id}/status` | Updates quote lifecycle status (`submitted`, `approved`, `rejected`) |
 | `POST` | `/api/quotes/copilot` | Copilot explanation for unsaved draft quotes |
+| `GET` | `/api/quotes/copilot/status` | Safe diagnostic status of Gemini Copilot (`configured`, `model`) |
 | `POST` | `/api/quotes/{id}/copilot`| Copilot explanation for saved quotes |
 
 ---
@@ -163,13 +248,13 @@ All API endpoints are mounted under `/api` (plus the `/health` root check):
 
 ### Backend Test Suite (Pytest)
 ```bash
-# Run 109 automated backend tests
-.\backend\.venv\Scripts\python.exe -m pytest backend/tests -v
+# Run all 121 automated backend unit and integration tests
+pytest backend/tests -v
 ```
 
 ### Frontend Test Suite (Node.js Test Runner)
 ```bash
-# Run unit & live integration tests (55 passing tests)
+# Run unit & regression test suites (65 tests)
 npm --prefix frontend test
 
 # Run TypeScript type verification
